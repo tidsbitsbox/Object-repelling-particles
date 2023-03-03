@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0,target-densitydpi=device-dpi, user-scalable=no">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>rocket</title>
+</head>
+
+
+<body>
+<!--<canvas  id="canvas"  width=600px; height=600px style="border: solid 1px #666"></canvas>
+<div id=count></div>
+<div id=count1></div>
+<div id=count2></div>
+<div id=count3></div>
+<div id=count4></div>-->
+<script src="vector.js"></script>
+<script>
+var width=(window.innerWidth<600)?window.innerWidth:600;
+
+var canvas = document.createElement('canvas');
+canvas.id     = "canvas";
+canvas.width  = width;
+canvas.height = width;
+canvas.style.zIndex   = 0;
+canvas.style.position = "relative";
+canvas.style.border   = "1px solid";
+
+var body = document.getElementsByTagName("body")[0];
+body.appendChild(canvas);
+
+var width=width;
+var height=width;
+var ctx = document.getElementById('canvas').getContext('2d');
+
+var img1 = document.createElement('img');
+img1.src = "statue_water.png";
+
+if(window.innerWidth<600){ var ratio=window.innerWidth/600;}
+ctx.scale(ratio,ratio);
+angleMode = "radians";
+
+var gravity = new Vector(0, 0.2);
+
+var Repeller = function(x, y) {
+    this.power = 198;
+    this.position = new Vector(x, y);
+};
+
+Repeller.prototype.display = function() {
+ctx.beginPath();
+ctx.strokeStyle = "rgba(0,0,0,0)";
+ctx.arc(this.position.x,this.position.y,30, 0, Math.PI * 2, true);
+ctx.stroke();
+ctx.fillStyle = "rgba(166,166,166,0)";
+ctx.fill();
+ctx.closePath();
+};
+
+Repeller.prototype.calculateRepelForce = function(p) {
+   
+    var dir = this.position.subtract(p.position); 
+	
+    
+	 
+    var d = dir.getMagnitude();
+    
+    dir.normalize();
+    
+    //if(d>100){d-=20;}
+	//else if(d<1){d+=20;}  
+   //document.getElementById('count').innerHTML=d;
+    var force = -1 * this.power/ (d * d);          
+    
+    dir.multiplyBy(force);  
+	                             
+    return dir;
+};
+
+var Particle = function(x,y) {
+    this.acceleration = new Vector(0, 0);
+    this.velocity = new Vector((Math.random()*2-1)/5, 0);
+    this.position = new Vector(x,y);
+    this.timeToLive = 255;
+    this.mass = Math.random()*5+5; 
+};
+
+Particle.prototype.run = function() {
+    this.update();
+    this.display();
+};
+
+Particle.prototype.applyForce = function(force) {
+    var f = new Vector(force.x,force.y);
+    f.divideBy(this.mass);
+    this.acceleration.addTo(f);
+};
+
+Particle.prototype.update = function() {
+    this.velocity.addTo(this.acceleration);
+    this.position.addTo(this.velocity);
+    this.acceleration.multiplyBy(0);
+    this.timeToLive -= 2;
+	
+};
+
+Particle.prototype.display = function() {
+
+ctx.beginPath();
+ctx.strokeStyle = "rgba(0,0,255,"+this.timeToLive/255+")";
+ctx.arc(this.position.x,this.position.y,this.mass, 0, Math.PI * 2, true);
+ctx.stroke();
+ctx.fillStyle = "rgba(80, 201, 220,"+this.timeToLive/255+")";
+ctx.fill();
+ctx.closePath();
+
+};
+
+Particle.prototype.isDead = function(){
+    if (this.timeToLive < 0 || this.position.y > 550) {//
+        return true;
+    } else {
+        return false;
+    }
+};
+
+
+var ParticleSystem = function(x,y) {
+    this.origin = new Vector(x,y);
+    this.particles = [];
+};
+
+ParticleSystem.prototype.addParticle = function() {
+    this.particles.push(new Particle(this.origin.x,this.origin.y));
+};
+
+ParticleSystem.prototype.applyForce = function(f){
+    for(var i = 0; i < this.particles.length; i++){
+        this.particles[i].applyForce(f);
+    }
+};
+
+ParticleSystem.prototype.applyGravity = function() {
+    for(var i = 0; i < this.particles.length; i++) {
+        var particleG = new Vector(gravity.x,gravity.y);
+        particleG.multiplyBy(this.particles[i].mass);
+        this.particles[i].applyForce(particleG);
+    }
+};
+
+ParticleSystem.prototype.applyRepeller = function(r) {
+  for(var i = 0; i < this.particles.length; i++){
+    var p = this.particles[i];
+    var force = r.calculateRepelForce(p);
+    p.applyForce(force);
+  }
+};
+
+ParticleSystem.prototype.run = function(){
+	for (var i = this.particles.length-1; i >= 0; i--) {
+    var p = this.particles[i];
+    p.run();
+    if (p.isDead()) {
+      this.particles.splice(i, 1);
+    }
+  }
+};
+
+var particleSystem = new ParticleSystem(265, 240);
+
+var repeller = new Repeller(265, 520);
+
+
+var draw = function() {
+ ctx.clearRect(0,0,width,height);
+ ctx.drawImage(img1, 0,0); 
+ 
+  particleSystem.applyGravity();
+  particleSystem.applyRepeller(repeller);
+  repeller.display();
+  particleSystem.addParticle();
+  particleSystem.run();
+ window.requestAnimationFrame(draw);    
+};
+window.requestAnimationFrame(draw);   
+////////////////////////////////////////////////////////////////////
+/*
+
+var ctx = document.getElementById('canvas').getContext('2d');
+var width=600;
+var height=600;
+
+// A single Particle object
+var Particle = function(x,y) {
+  this.acceleration = new Vector(0, 0);
+  this.velocity = new Vector(Math.random()*1-1, Math.random()*1-1);
+  this.position = new Vector(x, y);
+  this.timeToLive = 155.0;
+  this.r = 0;
+  this.b = 255;
+};
+
+Particle.prototype.run = function() {
+  this.update();
+  this.display();
+};
+
+Particle.prototype.update = function(){
+  this.velocity.addTo(this.acceleration);
+  this.position.addTo(this.velocity);
+  this.timeToLive -= 2;
+   this.r +=5;
+  this.b -=5;
+ 
+};
+
+Particle.prototype.display = function() {
+
+ctx.beginPath();
+//ctx.strokeStyle = "rgba(0,0,0,"+ this.timeToLive/255+")";
+ctx.arc(this.position.x,this.position.y,15, 0, Math.PI * 2, true);
+//ctx.stroke();
+ctx.fillStyle = "rgba("+this.r+",0,"+this.b+","+ this.timeToLive/255+")";
+ctx.fill();
+ctx.closePath();
+
+};
+
+Particle.prototype.isDead = function() {
+  if (this.timeToLive < 0) {
+      return true;
+  } else {
+      return false;
+  }
+};
+/*
+var particles = [];
+
+var draw = function() {
+  ctx.clearRect(0,0,width,height);
+  particles.push(new Particle(width/2, 50));
+
+  for (var i = particles.length-1; i >= 0; i--) {
+    var p = particles[i];
+    p.run();
+    if (p.isDead()) {
+      particles.splice(i, 1);
+    }
+  }
+
+window.requestAnimationFrame(draw);  
+};
+
+
+////////////////////////////////////////////
+window.requestAnimationFrame(draw);
+
+var Confetti = function(x,y) {
+  Particle.call(x,y);
+};
+
+Confetti.prototype = Object.create(Particle.prototype);
+Confetti.prototype.constructor = Confetti;
+
+Confetti.prototype.display = function(){
+ ctx.beginPath();
+ctx.rect(this.position.x, this.position.y, 15,15);
+ctx.stroke();
+ctx.closePath();
+  //translate(this.position.x, this.position.y);
+ // var theta = map(this.position.x, 0, width, 0, TWO_PI * 2);
+  //rotate(theta);
+  //rect(0, 0, 12, 12);
+  //popMatrix();
+};
+Confetti.prototype.update = function(){
+
+};
+var ParticleSystem = function(x,y) {
+    this.origin = new Vector(x,y);
+    this.particles = [];
+};
+
+ParticleSystem.prototype.addParticle = function() {
+   this.particles.push(new Particle(this.origin.x,this.origin.y));
+/*var r = Math.random()*1;
+  if (r < 0.5) {
+    this.particles.push(new Particle(this.origin.x,this.origin.y));
+  } else {
+    this.particles.push(new Confetti(this.origin.x,this.origin.y));
+  }
+
+};
+
+
+ParticleSystem.prototype.run = function() {
+  for (var i = this.particles.length-1; i >= 0; i--) {
+      var p = this.particles[i];
+      p.run();
+      if (p.isDead()) {
+        this.particles.splice(i, 1);
+      }
+    }
+};
+
+var ps = new ParticleSystem(width/2, 50);
+
+var draw = function() {
+
+ ctx.clearRect(0,0,width,height);
+ 
+  ps.run();
+  ps.addParticle();
+ 
+window.requestAnimationFrame(draw);   
+};
+window.requestAnimationFrame(draw); 
+
+var mouseD=false;
+document.getElementById('canvas').addEventListener('mousedown',e => mouseD=true);
+document.getElementById('canvas').addEventListener('mouseup',e => mouseD=false);
+document.getElementById('canvas').addEventListener('mousemove',resetCoords);
+
+
+function resetCoords(event){
+if(!mouseD) return false;
+var x=document.getElementById('canvas').offsetLeft;
+var y=document.getElementById('canvas').offsetTop;
+x=event.clientX-x;
+y=event.clientY-y;
+ps.origin.x=x;
+ps.origin.y=y;
+
+}
+*/
+</script>
+
+</body>
+</html>
